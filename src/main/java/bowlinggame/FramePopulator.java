@@ -2,13 +2,12 @@ package bowlinggame;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import static bowlinggame.Bonus.SPARE;
 import static bowlinggame.Bonus.STRIKE;
-import static java.util.Arrays.asList;
+import static bowlinggame.BowlingGameMain.TOTAL_FRAMES_COUNT;
+import static bowlinggame.BowlingGameMain.TOTAL_PINS_COUNT;
 
 public class FramePopulator {
-
 
     /**
      * Populates the frames from user input
@@ -17,71 +16,65 @@ public class FramePopulator {
      */
     public List<Frame> populateFrames() {
         List<Frame> frames = new ArrayList<>();
+        int currentFramePosition;
 
         do {
-            Frame frame = buildFrame(frames);
+            currentFramePosition = frames.size() + 1;
+            Frame frame = new Frame();
+            frame.setPosition(currentFramePosition);
+
+            populateFrameRolls(frame);
+
             frames.add(frame);
-        } while (frames.size() < 10);
+        } while (currentFramePosition < TOTAL_FRAMES_COUNT);
 
         return frames;
     }
 
 
-    private Frame buildFrame(final List<Frame> frames) {
-        Frame frame = new Frame();
+    private void populateFrameRolls(final Frame frame) {
+        for (int currentRollIndex = 1; currentRollIndex <= 3; currentRollIndex++) {
 
-        for (int index = 1; index <= 3; index++) {
-            if (isThirdRollNotAccepted(frames, frame, index)) {
-                continue;
+            final boolean hasStrikeOrSpare = frame.getBonusType() == STRIKE || frame.getBonusType() == SPARE;
+            final boolean isThirdRoll = currentRollIndex == 3;
+
+            final boolean isAllowedToRollExceptForLastFrame = !frame.isLastFrame() && !hasStrikeOrSpare && !isThirdRoll;
+            final boolean isAllowedToRollForLastFrameOnly = frame.isLastFrame() && (hasStrikeOrSpare || !isThirdRoll);
+
+            if (isAllowedToRollExceptForLastFrame || isAllowedToRollForLastFrameOnly) {
+                final int input = collectUserInput(frame, currentRollIndex);
+                assignBonusType(frame, input);
+                addRollInputToFrame(frame, input);
             }
-            final int input = getValidInputFromUser(frames.size() + 1, index);
-            assignBonusTypesToFrame(frame, input);
-            updateFrameRollsFromInput(frame, input);
-            addPreviousFrameTotalToCurrent(frames, frame);
-        }
-
-        return frame;
-    }
-
-
-    protected void addPreviousFrameTotalToCurrent(final List<Frame> frames, final Frame frame) {
-        if (!frames.isEmpty()) {
-            frame.setTotal(frame.getTotal() + frames.get(frames.size() - 1).getTotal());
         }
     }
 
 
-    protected void assignBonusTypesToFrame(final Frame frame, final int input) {
+    private int collectUserInput(final Frame frame, final int currentRollIndex) {
+        FrameRollCollector frameRollCollector = new FrameRollCollector();
+        return frameRollCollector.collectInputFromUser(frame, currentRollIndex);
+    }
+
+
+    protected void assignBonusType(final Frame frame, final int input) {
         if (frame.getRolls().isEmpty()) {
             handleFirstRoll(frame, input);
-        } else if (frame.getRolls().size() == 1 && frame.getBonusType() != STRIKE) {
+        } else if (frame.getBonusType() != STRIKE) {
             handleSecondRoll(frame, input);
         }
     }
 
 
-    private boolean isThirdRollNotAccepted(final List<Frame> frames, final Frame frame, final int index) {
-        return isRollAfterStrikeAndNotInLastFrame(frames, frame, index) || isThirdRollNotInLastFrame(frames, index);
-    }
-
-
-    private boolean isThirdRollNotInLastFrame(final List<Frame> frames, final int index) {
-        return isNotLastFrame(frames) && index > 2;
-    }
-
-
-    private boolean isRollAfterStrikeAndNotInLastFrame(final List<Frame> frames, final Frame frame, final int index) {
-        return frame.getBonusType() == STRIKE && isNotLastFrame(frames) && index >= 2;
-    }
-
-
-    private boolean isNotLastFrame(final List<Frame> frames) {
-        return frames.size() != 9;
+    private void handleFirstRoll(final Frame frame, final int input) {
+        final boolean isStrike = input == TOTAL_PINS_COUNT;
+        if (isStrike) {
+            frame.setBonusType(STRIKE);
+        }
     }
 
 
     private void handleSecondRoll(final Frame frame, final int input) {
-        final int firstRollCount = frame.getRolls().iterator().next().getCount();
+        final int firstRollCount = frame.getRolls().get(0).getScore();
         final boolean isSpare = (firstRollCount + input) == 10;
         if (isSpare) {
             frame.setBonusType(SPARE);
@@ -89,41 +82,15 @@ public class FramePopulator {
     }
 
 
-    protected int getValidInputFromUser(final int frameNumber, final int i) {
-        final Scanner scan = new Scanner(System.in);
-        int input;
-        do {
-            System.out.print("Frame " + frameNumber + " - Roll " + i + " : ");
-            final String inputLine = scan.nextLine();
-            input = Integer.parseInt(inputLine);
-        } while (!isInputValid(input));
-        return input;
-    }
-
-
-    private void handleFirstRoll(final Frame frame, final int input) {
-        final boolean isStrike = input == 10;
-        if (isStrike) {
-            frame.setBonusType(STRIKE);
-        }
-    }
-
-
-    protected void updateFrameRollsFromInput(final Frame frame, final int input) {
+    protected void addRollInputToFrame(final Frame frame, final int input) {
         final Roll currentRoll = new Roll(input);
 
         if (frame.getRolls().isEmpty()) {
             frame.setRolls(List.of(currentRoll));
-            frame.setTotal(currentRoll.getCount());
         } else {
-            final Roll previousRoll = frame.getRolls().get(0);
-            frame.setRolls(asList(previousRoll, currentRoll));
-            frame.setTotal(previousRoll.getCount() + currentRoll.getCount());
+            List<Roll> rolls = new ArrayList<>(frame.getRolls());
+            rolls.add(currentRoll);
+            frame.setRolls(rolls);
         }
-    }
-
-
-    private boolean isInputValid(final int input) {
-        return input >= 0 && input <= 10;
     }
 }

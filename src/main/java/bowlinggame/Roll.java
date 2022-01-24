@@ -1,29 +1,27 @@
 package bowlinggame;
 
 public class Roll {
-    
-    private int count;
+
+    private int score;
 
 
     public Roll(final int count) {
-        this.count = count;
+        this.score = count;
     }
 
 
-    public int getCount() {
-        return count;
+    public int getScore() {
+        return score;
     }
 
 
-    public void setCount(final int count) {
-        this.count = count;
+    public void setScore(final int score) {
+        this.score = score;
     }
 
 
     @Override
     public String toString() {
-        return "Roll{" +
-                "count=" + count +
-                '}';
+        return String.valueOf(score);
     }
 }
